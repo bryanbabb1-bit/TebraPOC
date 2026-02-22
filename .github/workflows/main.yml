@@ -1,8 +1,8 @@
 name: Update Dashboard Data
 on:
-  workflow_dispatch: # Allows manual trigger
+  workflow_dispatch:
   schedule:
-    - cron: '0 12 * * *' # Runs daily at 12:00 UTC (7:00 AM CST)
+    - cron: '0 12 * * *'
 
 jobs:
   build:
@@ -18,11 +18,10 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install pandas boxsdk[all]
+          pip install pandas boxsdk[all]  # <--- THIS IS THE FIX
 
       - name: Run Congregator Script
         env:
-          # This pulls the secrets you saved in GitHub Settings
           BOX_CLIENT_ID: ${{ secrets.BOX_CLIENT_ID }}
           BOX_CLIENT_SECRET: ${{ secrets.BOX_CLIENT_SECRET }}
         run: python congregate.py
