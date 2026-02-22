@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Billing Operations Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: inline-block; }
+    </style>
+</head>
+<body>
+    <h1>Billing Insights: POC</h1>
+    <div class="card">
+        <h3>Total Revenue (Full Picture)</h3>
+        <h2 id="total-rev">$0.00</h2>
+        <p>Last Updated: <span id="update-time">-</span></p>
+        <canvas id="myChart" width="400" height="200"></canvas>
+    </div>
+
+    <script>
+        fetch('data.json')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('total-rev').innerText = '$' + data.total_revenue.toLocaleString();
+                document.getElementById('update-time').innerText = data.last_updated;
+
+                const ctx = document.getElementById('myChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(data.provider_breakdown),
+                        datasets: [{
+                            label: 'Revenue by Provider',
+                            data: Object.values(data.provider_breakdown),
+                            backgroundColor: '#3498db'
+                        }]
+                    }
+                });
+            });
+    </script>
+</body>
+</html>
