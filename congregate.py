@@ -14,14 +14,16 @@ def get_box_client():
         from box_sdk_gen import BoxClient, BoxCCGAuth, CCGConfig
         print("Using Modern Box SDK")
         
-        # Fixed CCG Config with Enterprise Subject Type for 2026 SDK requirements
+        # 1. Initialize Config (does not accept subject_type in this version)
         config = CCGConfig(
             client_id=client_id, 
-            client_secret=client_secret, 
-            box_subject_type='enterprise'
+            client_secret=client_secret
         )
         
+        # 2. Assign Enterprise Subject to the Auth object
         auth = BoxCCGAuth(config)
+        auth.box_subject_type = 'enterprise'
+        
         return BoxClient(auth)
     except ImportError:
         from boxsdk import CCGAuth, Client
@@ -56,7 +58,7 @@ def congregate_data():
     print("--- Starting Smart Folder Sync ---")
     client = get_box_client()
     
-    # Pointing both to your single reports folder ID
+    # Reports folder ID provided
     FOLDER_REPORTS_ID = '367459660638' 
 
     targets = {
