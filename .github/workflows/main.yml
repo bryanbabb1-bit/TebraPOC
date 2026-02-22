@@ -16,9 +16,10 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies
+      - name: Install Box and Pandas
         run: |
-          pip install pandas boxsdk[all]  # <--- THIS IS THE FIX
+          python -m pip install --upgrade pip
+          pip install pandas boxsdk[all]
 
       - name: Run Congregator Script
         env:
