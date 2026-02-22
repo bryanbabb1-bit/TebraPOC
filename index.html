@@ -2,42 +2,95 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Billing Operations Dashboard</title>
+    <title>Tebra POC | Executive Analytics</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: inline-block; }
+        /* Chiefs-Themed Styling for Olathe HQ */
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #f0f0f0; margin: 0; display: none; } 
+        .header { background-color: #E31837; color: #FFFFFF; padding: 25px; text-align: center; border-bottom: 6px solid #FFB81C; }
+        .container { max-width: 900px; margin: 30px auto; padding: 20px; }
+        .metric-card { background: white; border-radius: 12px; padding: 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border-left: 8px solid #E31837; margin-bottom: 20px; }
+        .chart-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
+        .revenue-value { font-size: 48px; color: #2D2D2D; font-weight: bold; margin: 10px 0; }
+        .footer { text-align: center; color: #777; font-size: 12px; margin-top: 40px; }
     </style>
 </head>
 <body>
-    <h1>Billing Insights: POC</h1>
-    <div class="card">
-        <h3>Total Revenue (Full Picture)</h3>
-        <h2 id="total-rev">$0.00</h2>
-        <p>Last Updated: <span id="update-time">-</span></p>
-        <canvas id="myChart" width="400" height="200"></canvas>
+
+    <div class="header">
+        <h1>Tebra Data Aggregator</h1>
+        <p>Live Executive Dashboard | Olathe, KS</p>
+    </div>
+
+    <div class="container">
+        <div class="metric-card">
+            <h2 style="color: #E31837; margin-top: 0;">Total Aggregated Revenue</h2>
+            <div id="revenue-total" class="revenue-value">$0.00</div>
+            <p id="last-updated" style="color: #666; font-style: italic;"></p>
+        </div>
+
+        <div class="chart-card">
+            <h3 style="text-align: center; color: #333;">Revenue Distribution by Provider</h3>
+            <canvas id="revenueChart"></canvas>
+        </div>
+
+        <div class="footer">
+            PROPRIETARY AND CONFIDENTIAL <br> 
+            SECURED VIA PSpoc26 AUTHENTICATION | SOURCE: BOX.COM
+        </div>
     </div>
 
     <script>
-        fetch('data.json')
-            .then(res => res.json())
-            .then(data => {
-                document.getElementById('total-rev').innerText = '$' + data.total_revenue.toLocaleString();
-                document.getElementById('update-time').innerText = data.last_updated;
+        // --- UPDATED AUTHENTICATION GATE ---
+        const password = prompt("Restricted Access: Please enter the Tebra POC Password");
 
-                const ctx = document.getElementById('myChart').getContext('2d');
+        if (password === "PSpoc26") {
+            document.body.style.display = "block";
+            fetchData();
+        } else {
+            alert("Incorrect password. Access Denied.");
+            window.location.href = "https://www.box.com";
+        }
+
+        async function fetchData() {
+            try {
+                const response = await fetch('data.json');
+                const data = await response.json();
+
+                // Update Revenue Hero Number
+                document.getElementById('revenue-total').innerText = new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                }).format(data.total_revenue);
+
+                // Update Timestamp
+                document.getElementById('last-updated').innerText = "Last Sync from Box: " + data.last_updated;
+
+                // Create the Chart
+                const ctx = document.getElementById('revenueChart').getContext('2d');
                 new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: Object.keys(data.provider_breakdown),
                         datasets: [{
-                            label: 'Revenue by Provider',
+                            label: 'Total Revenue ($)',
                             data: Object.values(data.provider_breakdown),
-                            backgroundColor: '#3498db'
+                            backgroundColor: '#E31837', // Chiefs Red
+                            borderColor: '#FFB81C',    // Chiefs Gold
+                            borderWidth: 2
                         }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
                     }
                 });
-            });
+            } catch (error) {
+                console.error("Error loading dashboard data:", error);
+            }
+        }
     </script>
 </body>
 </html>
