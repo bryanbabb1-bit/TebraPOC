@@ -10,19 +10,22 @@ def get_box_client():
     client_id = os.environ.get('BOX_CLIENT_ID')
     client_secret = os.environ.get('BOX_CLIENT_SECRET')
     
+    # Your PractiSynergy Enterprise ID
+    ENTERPRISE_ID = '1444288525' 
+
     try:
         from box_sdk_gen import BoxClient, BoxCCGAuth, CCGConfig
         print("Using Modern Box SDK")
         
-        # 1. Initialize Config (does not accept subject_type in this version)
         config = CCGConfig(
             client_id=client_id, 
             client_secret=client_secret
         )
         
-        # 2. Assign Enterprise Subject to the Auth object
         auth = BoxCCGAuth(config)
+        # Defining the specific Enterprise subject for the 2026 handshake
         auth.box_subject_type = 'enterprise'
+        auth.box_subject_id = ENTERPRISE_ID
         
         return BoxClient(auth)
     except ImportError:
@@ -58,7 +61,7 @@ def congregate_data():
     print("--- Starting Smart Folder Sync ---")
     client = get_box_client()
     
-    # Reports folder ID provided
+    # Reports folder ID: 367459660638
     FOLDER_REPORTS_ID = '367459660638' 
 
     targets = {
