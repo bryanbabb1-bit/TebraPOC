@@ -3,82 +3,113 @@ import json
 import os
 import sys
 
-# Force Python to look in the current directory for the installed boxsdk
+# Ensure local libraries are prioritized
 sys.path.append(os.getcwd())
 
 def get_box_client():
     client_id = os.environ.get('BOX_CLIENT_ID')
     client_secret = os.environ.get('BOX_CLIENT_SECRET')
-
-    # Attempt to use the newer Box SDK generation logic first
+    
     try:
         from box_sdk_gen import BoxClient, BoxCCGAuth, CCGConfig
-        print("Authenticated using Modern Box SDK")
+        print("Using Modern Box SDK")
         config = CCGConfig(client_id=client_id, client_secret=client_secret)
         auth = BoxCCGAuth(config)
         return BoxClient(auth)
     except ImportError:
-        # Fallback to the legacy SDK if the new one isn't found
         from boxsdk import CCGAuth, Client
-        print("Authenticated using Legacy Box SDK")
+        print("Using Legacy Box SDK")
         auth = CCGAuth(client_id=client_id, client_secret=client_secret)
         return Client(auth)
 
+def get_latest_file_id(client, folder_id, name_prefix):
+    """Finds the ID of the most recently modified file starting with a prefix."""
+    print(f"Scanning Folder {folder_id} for newest '{name_prefix}' file...")
+    
+    # Get items in the folder
+    if hasattr(client, 'folders'):
+        # Modern SDK
+        items = client.folders.get_folder_items(folder_id).entries
+    else:
+        # Legacy SDK
+        items = client.folder(folder_id).get_items()
+
+    latest_file = None
+    
+    for item in items:
+        # Ensure it's a file and matches our naming pattern
+        if item.type == 'file' and item.name.lower().startswith(name_prefix.lower()):
+            if latest_file is None or item.modified_at > latest_file.modified_at:
+                latest_file = item
+
+    if latest_file:
+        print(f"Found Latest: {latest_file.name} (ID: {latest_file.id})")
+        return latest_file.id, latest_file.name
+    return None, None
+
 def congregate_data():
-    print("--- Starting Box Data Sync ---")
+    print("--- Starting Smart Folder Sync ---")
     client = get_box_client()
     
-    # --- STEP 1: DEFINE BOX FILE IDS ---
-    # Replace these numbers with your actual Box File IDs from the URLs
-    file_ids = {
-        'Group_A_Claims.csv': '2143561343275', 
-        'Group_B_Revenue.csv': '2143561223806'
-    }
-    
-    # --- STEP 2: DOWNLOAD FILES FROM BOX ---
-    for filename, file_id in file_ids.items():
-        print(f"Downloading {filename} (ID: {file_id})...")
-        try:
-            # Modern SDK download method
-            if hasattr(client, 'files'):
-                file_content = client.files.download_file(file_id)
-                with open(filename, 'wb') as f:
-                    f.write(file_content)
-            # Legacy SDK download method
-            else:
-                with open(filename, 'wb') as f:
-                    client.file(file_id).download_to(f)
-            print(f"Successfully downloaded {filename}")
-        except Exception as e:
-            print(f"Error downloading {filename}: {e}")
-            return
+    # UPDATE THESE: Folder IDs from your Box URL when you open the folders
+    FOLDER_A_ID = 'YOUR_FOLDER_A_ID' 
+    FOLDER_B_ID = 'YOUR_FOLDER_B_ID'
 
-    # --- STEP 3: PROCESS AND MERGE DATA ---
+    # Map prefixes to the folders they live in
+    targets = {
+        'Group_A_Claims': FOLDER_A_ID,
+        'Group_B_Revenue': FOLDER_B_ID
+    }
+
+    downloaded_files = []
+
+    for prefix, folder_id in targets.items():
+        file_id, real_name = get_latest_file_id(client, folder_id, prefix)
+        
+        if file_id:
+            local_filename = f"{prefix}.csv"
+            print(f"Downloading {real_name} as {local_filename}...")
+            
+            if hasattr(client, 'files'):
+                content = client.files.download_file(file_id)
+                with open(local_filename, 'wb') as f:
+                    f.write(content)
+            else:
+                with open(local_filename, 'wb') as f:
+                    client.file(file_id).download_to(f)
+            
+            downloaded_files.append(local_filename)
+        else:
+            print(f"CRITICAL: No file found starting with '{prefix}' in folder {folder_id}")
+
+    if len(downloaded_files) < 2:
+        print("Sync Aborted: Could not find both required files.")
+        return
+
+    # --- PROCESS DATA ---
     try:
         df_a = pd.read_csv('Group_A_Claims.csv')
         df_b = pd.read_csv('Group_B_Revenue.csv')
 
-        # Standardizing columns for the "Full Picture"
+        # Clean columns (Handles Tebra's varied naming conventions)
         df_a = df_a.rename(columns={'Provider_Name': 'Provider', 'Amount_Billed': 'Amount'})
         df_b = df_b.rename(columns={'Doctor': 'Provider', 'Gross_Charge': 'Amount'})
 
         combined = pd.concat([df_a, df_b], ignore_index=True)
 
-        # Create JSON summary for the dashboard
         summary = {
             "total_revenue": float(combined['Amount'].sum()),
             "provider_breakdown": {str(k): float(v) for k, v in combined.groupby('Provider')['Amount'].sum().to_dict().items()},
-            "last_updated": pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
+            "last_updated": pd.Timestamp.now().strftime("%Y-%m-%d %I:%M %p")
         }
 
         with open('data.json', 'w') as f:
             json.dump(summary, f, indent=4)
         
-        print(f"--- Sync Complete ---")
-        print(f"Total Revenue: ${summary['total_revenue']:,.2f}")
+        print(f"SUCCESS: Dashboard updated with data from {pd.Timestamp.now().date()}")
 
     except Exception as e:
-        print(f"Error processing data: {e}")
+        print(f"Error during data crunching: {e}")
 
 if __name__ == "__main__":
     congregate_data()
