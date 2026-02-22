@@ -18,8 +18,8 @@ def congregate_data():
     # 1. DOWNLOAD FROM BOX
     # Replace 'FILE_ID_A' with the actual ID from the Box URL for Group A's CSV
     file_ids = {
-        'Group_A_Claims.csv': 'YOUR_BOX_FILE_ID_A', 
-        'Group_B_Revenue.csv': 'YOUR_BOX_FILE_ID_B'
+        'Group_A_Claims.csv': '2143561343275', 
+        'Group_B_Revenue.csv': '2143561223806'
     }
     
     for filename, file_id in file_ids.items():
@@ -49,3 +49,4 @@ def congregate_data():
 
 if __name__ == "__main__":
     congregate_data()
+
