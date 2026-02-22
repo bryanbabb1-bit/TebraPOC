@@ -52,8 +52,8 @@ def congregate_data():
     client = get_box_client()
     
     # UPDATE THESE: Folder IDs from your Box URL when you open the folders
-    FOLDER_A_ID = 'YOUR_FOLDER_A_ID' 
-    FOLDER_B_ID = 'YOUR_FOLDER_B_ID'
+    FOLDER_A_ID = '367459660638' 
+    FOLDER_B_ID = 367459660638'
 
     # Map prefixes to the folders they live in
     targets = {
@@ -113,4 +113,5 @@ def congregate_data():
 
 if __name__ == "__main__":
     congregate_data()
+
 
