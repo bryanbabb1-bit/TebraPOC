@@ -3,7 +3,7 @@ import json
 import os
 import sys
 
-# Ensure local libraries are prioritized
+# Ensure local libraries in the current directory are prioritized
 sys.path.append(os.getcwd())
 
 def get_box_client():
@@ -13,7 +13,14 @@ def get_box_client():
     try:
         from box_sdk_gen import BoxClient, BoxCCGAuth, CCGConfig
         print("Using Modern Box SDK")
-        config = CCGConfig(client_id=client_id, client_secret=client_secret)
+        
+        # Fixed CCG Config with Enterprise Subject Type for 2026 SDK requirements
+        config = CCGConfig(
+            client_id=client_id, 
+            client_secret=client_secret, 
+            box_subject_type='enterprise'
+        )
+        
         auth = BoxCCGAuth(config)
         return BoxClient(auth)
     except ImportError:
@@ -26,18 +33,16 @@ def get_latest_file_id(client, folder_id, name_prefix):
     """Finds the ID of the most recently modified file starting with a prefix."""
     print(f"Scanning Folder {folder_id} for newest '{name_prefix}' file...")
     
-    # Get items in the folder
     if hasattr(client, 'folders'):
-        # Modern SDK
+        # Modern SDK Method
         items = client.folders.get_folder_items(folder_id).entries
     else:
-        # Legacy SDK
+        # Legacy SDK Method
         items = client.folder(folder_id).get_items()
 
     latest_file = None
     
     for item in items:
-        # Ensure it's a file and matches our naming pattern
         if item.type == 'file' and item.name.lower().startswith(name_prefix.lower()):
             if latest_file is None or item.modified_at > latest_file.modified_at:
                 latest_file = item
@@ -51,14 +56,12 @@ def congregate_data():
     print("--- Starting Smart Folder Sync ---")
     client = get_box_client()
     
-    # UPDATE THESE: Folder IDs from your Box URL when you open the folders
-    FOLDER_A_ID = '367459660638' 
-    FOLDER_B_ID = '367459660638'
+    # Pointing both to your single reports folder ID
+    FOLDER_REPORTS_ID = '367459660638' 
 
-    # Map prefixes to the folders they live in
     targets = {
-        'Group_A_Claims': FOLDER_A_ID,
-        'Group_B_Revenue': FOLDER_B_ID
+        'Group_A_Claims': FOLDER_REPORTS_ID,
+        'Group_B_Revenue': FOLDER_REPORTS_ID
     }
 
     downloaded_files = []
@@ -83,15 +86,14 @@ def congregate_data():
             print(f"CRITICAL: No file found starting with '{prefix}' in folder {folder_id}")
 
     if len(downloaded_files) < 2:
-        print("Sync Aborted: Could not find both required files.")
+        print("Sync Aborted: Required files missing from Box.")
         return
 
-    # --- PROCESS DATA ---
     try:
         df_a = pd.read_csv('Group_A_Claims.csv')
         df_b = pd.read_csv('Group_B_Revenue.csv')
 
-        # Clean columns (Handles Tebra's varied naming conventions)
+        # Normalizing columns for the aggregate view
         df_a = df_a.rename(columns={'Provider_Name': 'Provider', 'Amount_Billed': 'Amount'})
         df_b = df_b.rename(columns={'Doctor': 'Provider', 'Gross_Charge': 'Amount'})
 
@@ -106,13 +108,10 @@ def congregate_data():
         with open('data.json', 'w') as f:
             json.dump(summary, f, indent=4)
         
-        print(f"SUCCESS: Dashboard updated with data from {pd.Timestamp.now().date()}")
+        print(f"SUCCESS: Dashboard data updated.")
 
     except Exception as e:
-        print(f"Error during data crunching: {e}")
+        print(f"Error during data processing: {e}")
 
 if __name__ == "__main__":
     congregate_data()
-
-
-
