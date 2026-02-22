@@ -10,43 +10,44 @@ def get_box_client():
     client_id = os.environ.get('BOX_CLIENT_ID')
     client_secret = os.environ.get('BOX_CLIENT_SECRET')
     
-    # Your PractiSynergy Enterprise ID
-    ENTERPRISE_ID = '1444288525' 
+    # PractiSynergy Enterprise ID
+    enterprise_id = '1444288525' 
 
     try:
         from box_sdk_gen import BoxClient, BoxCCGAuth, CCGConfig
         print("Using Modern Box SDK")
         
+        # 1. Setup the Config
         config = CCGConfig(
             client_id=client_id, 
-            client_secret=client_secret
+            client_secret=client_secret,
+            box_subject_type='enterprise',
+            box_subject_id=enterprise_id
         )
         
+        # 2. Setup Auth with the config
         auth = BoxCCGAuth(config)
-        # Defining the specific Enterprise subject for the 2026 handshake
-        auth.box_subject_type = 'enterprise'
-        auth.box_subject_id = ENTERPRISE_ID
         
+        # 3. Pass the fully-loaded auth to the Client
         return BoxClient(auth)
-    except ImportError:
-        from boxsdk import CCGAuth, Client
-        print("Using Legacy Box SDK")
-        auth = CCGAuth(client_id=client_id, client_secret=client_secret)
-        return Client(auth)
+        
+    except (ImportError, TypeError):
+        # Fallback for different SDK minor versions
+        from box_sdk_gen import BoxClient, BoxCCGAuth, CCGConfig
+        config = CCGConfig(client_id=client_id, client_secret=client_secret)
+        auth = BoxCCGAuth(config)
+        auth.box_subject_type = 'enterprise'
+        auth.box_subject_id = enterprise_id
+        return BoxClient(auth)
 
 def get_latest_file_id(client, folder_id, name_prefix):
     """Finds the ID of the most recently modified file starting with a prefix."""
     print(f"Scanning Folder {folder_id} for newest '{name_prefix}' file...")
     
-    if hasattr(client, 'folders'):
-        # Modern SDK Method
-        items = client.folders.get_folder_items(folder_id).entries
-    else:
-        # Legacy SDK Method
-        items = client.folder(folder_id).get_items()
+    # Get items in the folder
+    items = client.folders.get_folder_items(folder_id).entries
 
     latest_file = None
-    
     for item in items:
         if item.type == 'file' and item.name.lower().startswith(name_prefix.lower()):
             if latest_file is None or item.modified_at > latest_file.modified_at:
@@ -78,13 +79,10 @@ def congregate_data():
             local_filename = f"{prefix}.csv"
             print(f"Downloading {real_name} as {local_filename}...")
             
-            if hasattr(client, 'files'):
-                content = client.files.download_file(file_id)
-                with open(local_filename, 'wb') as f:
-                    f.write(content)
-            else:
-                with open(local_filename, 'wb') as f:
-                    client.file(file_id).download_to(f)
+            # Use the newer SDK download method
+            content = client.files.download_file(file_id)
+            with open(local_filename, 'wb') as f:
+                f.write(content)
             
             downloaded_files.append(local_filename)
         else:
@@ -98,7 +96,6 @@ def congregate_data():
         df_a = pd.read_csv('Group_A_Claims.csv')
         df_b = pd.read_csv('Group_B_Revenue.csv')
 
-        # Normalizing columns for the aggregate view
         df_a = df_a.rename(columns={'Provider_Name': 'Provider', 'Amount_Billed': 'Amount'})
         df_b = df_b.rename(columns={'Doctor': 'Provider', 'Gross_Charge': 'Amount'})
 
@@ -113,7 +110,7 @@ def congregate_data():
         with open('data.json', 'w') as f:
             json.dump(summary, f, indent=4)
         
-        print(f"SUCCESS: Dashboard data updated.")
+        print(f"SUCCESS: Dashboard updated at {summary['last_updated']}")
 
     except Exception as e:
         print(f"Error during data processing: {e}")
