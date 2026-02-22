@@ -31,8 +31,8 @@ def congregate_data():
     # --- STEP 1: DEFINE BOX FILE IDS ---
     # Replace these numbers with your actual Box File IDs from the URLs
     file_ids = {
-        'Group_A_Claims.csv': 'YOUR_FILE_ID_A', 
-        'Group_B_Revenue.csv': 'YOUR_FILE_ID_B'
+        'Group_A_Claims.csv': '2143561343275', 
+        'Group_B_Revenue.csv': '2143561223806'
     }
     
     # --- STEP 2: DOWNLOAD FILES FROM BOX ---
@@ -82,3 +82,4 @@ def congregate_data():
 
 if __name__ == "__main__":
     congregate_data()
+
