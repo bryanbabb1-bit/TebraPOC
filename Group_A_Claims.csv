@@ -1,4 +1,0 @@
-Claim_ID,Provider_Name,Date_Submitted,Amount_Billed,Status,Error_Code
-CLM-9901,Dr. Smith,2026-02-15,450,Paid,NULL
-CLM-9902,Dr. Jones,2026-02-16,1200,Denied,ERR-404
-CLM-9903,Dr. Smith,2026-02-16,320,Pending,NULL
