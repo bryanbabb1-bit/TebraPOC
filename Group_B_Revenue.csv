@@ -1,0 +1,4 @@
+Reference_Num,Doctor,Service_Date,Gross_Charge,Net_Collected,Denial_Reason
+REF-A1,"Smith, A",2026-02-15,450,380,None
+REF-A2,"Jones, B",2026-02-15,1200,0,Coding Error
+REF-A3,"Brown, C",2026-02-17,850,800,None
