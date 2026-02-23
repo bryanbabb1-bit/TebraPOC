@@ -28,14 +28,21 @@ if __name__ == "__main__":
                 try: data = json.load(f)
                 except: pass
 
-        # 3. Process based on filename
-        if 'claim' in file_name:
+        # 3. Smart Processing (The Fix)
+        if 'Amount_Billed' in df.columns:
+            print("Processing as CLAIMS data based on columns...")
             data['claims'] = df.to_dict(orient='records')
             data['stats']['total_claims_value'] = df['Amount_Billed'].apply(clean_curr).sum()
-        else:
+            
+        elif 'Gross_Charge' in df.columns and 'Net_Collected' in df.columns:
+            print("Processing as REVENUE data based on columns...")
             data['revenue'] = df.to_dict(orient='records')
             data['stats']['total_charges'] = df['Gross_Charge'].apply(clean_curr).sum()
             data['stats']['total_collected'] = df['Net_Collected'].apply(clean_curr).sum()
+            
+        else:
+            print("WARNING: Columns do not match known Claims or Revenue formats.")
+            sys.exit(1)
 
         data['last_update'] = pd.Timestamp.now().strftime('%Y-%m-%d %I:%M %p')
         
@@ -46,10 +53,10 @@ if __name__ == "__main__":
 
     except Exception as e:
         print(f"PROCESS ERROR: {str(e)}")
-        # Print columns even if it fails so we can debug
         try:
             print(f"AVAILABLE COLUMNS WERE: {list(df.columns)}")
         except:
             pass
         sys.exit(1)
+
 
