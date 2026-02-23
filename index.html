@@ -1,50 +1,71 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
     <title>PractiSynergy POC Dashboard</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; padding: 20px; }
-        .kpi-row { display: flex; gap: 20px; margin-bottom: 20px; justify-content: center; }
-        .kpi-card { background: white; padding: 15px 30px; border-radius: 10px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .kpi-val { font-size: 24px; font-weight: bold; color: #3498db; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 800px; margin: auto; }
-        .row { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; font-size: 14px; }
-        .status { font-weight: bold; color: #e67e22; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; padding: 25px; color: #333; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1000px; margin: auto; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .full-width { grid-column: span 2; }
+        .kpi { font-size: 28px; font-weight: bold; color: #2c3e50; margin: 10px 0; }
+        .label { font-size: 13px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; }
+        .status-bar { height: 10px; background: #ecf0f1; border-radius: 5px; margin: 10px 0; overflow: hidden; }
+        .progress { height: 100%; background: #27ae60; }
+        .update-tag { text-align: center; margin-bottom: 20px; font-size: 12px; color: #bdc3c7; }
     </style>
 </head>
 <body>
+    <div class="update-tag">System Last Synced: <span id="sync-time">-</span></div>
 
-<div class="kpi-row">
-    <div class="kpi-card"><div>Total Claims Value</div><div id="kpi-claims" class="kpi-val">$0</div></div>
-    <div class="kpi-card"><div>Net Collected</div><div id="kpi-rev" class="kpi-val">$0</div></div>
-</div>
+    <div class="grid">
+        <div class="card">
+            <div class="label">Revenue Performance</div>
+            <div class="kpi" id="rev-collected">$0.00</div>
+            <div class="label">Collected vs <span id="rev-charges">$0</span> Charges</div>
+            <div class="status-bar"><div id="rev-bar" class="progress" style="width: 0%"></div></div>
+        </div>
 
-<div class="card">
-    <h2>Claims Activity <span style="font-size: 12px; color: #999;" id="time"></span></h2>
-    <div id="claims-list">Loading...</div>
-</div>
+        <div class="card">
+            <div class="label">Total Claims Value</div>
+            <div class="kpi" id="claims-val">$0.00</div>
+            <div id="claims-count" class="label">0 Recent Claims</div>
+        </div>
 
-<script>
-    async function refresh() {
-        const res = await fetch('data.json?v=' + Date.now());
-        const data = await res.json();
-        
-        document.getElementById('time').innerText = "Last Update: " + data.last_update;
-        document.getElementById('kpi-claims').innerText = "$" + data.total_claims.toLocaleString();
-        document.getElementById('kpi-rev').innerText = "$" + data.total_revenue.toLocaleString();
+        <div class="card full-width">
+            <h2>Detailed Activity</h2>
+            <div id="activity-list">Loading files...</div>
+        </div>
+    </div>
 
-        const container = document.getElementById('claims-list');
-        container.innerHTML = (data.claims || []).map(c => `
-            <div class="row">
-                <span><strong>${c.ID}</strong> | ${c.Provider}</span>
-                <span class="status">${c.Status}</span>
-                <strong>$${c.Amount.toLocaleString()}</strong>
-            </div>
-        `).join('') || "No claims found.";
-    }
-    refresh();
-    setInterval(refresh, 30000);
-</script>
+    <script>
+        async function loadData() {
+            const res = await fetch('data.json?v=' + Date.now());
+            const d = await res.json();
+            const s = d.stats || {};
+            
+            document.getElementById('sync-time').innerText = d.last_update;
+            
+            // Update Revenue
+            const coll = s.total_collected || 0;
+            const char = s.total_charges || 1; // avoid div zero
+            document.getElementById('rev-collected').innerText = '$' + coll.toLocaleString();
+            document.getElementById('rev-charges').innerText = '$' + char.toLocaleString();
+            document.getElementById('rev-bar').style.width = (coll/char * 100) + '%';
+
+            // Update Claims
+            document.getElementById('claims-val').innerText = '$' + (s.total_claims_value || 0).toLocaleString();
+            document.getElementById('claims-count').innerText = (d.claims.length) + " Recent Claims";
+
+            // List recent claims
+            document.getElementById('activity-list').innerHTML = d.claims.slice(0,5).map(c => `
+                <div style="display:flex; justify-content:space-between; padding:8px; border-bottom:1px solid #eee">
+                    <span>${c.Claim_ID} - ${c.Provider_Name}</span>
+                    <span style="color:${c.Status === 'Paid' ? 'green' : 'red'}"><strong>$${c.Amount_Billed}</strong> (${c.Status})</span>
+                </div>
+            `).join('') || "No active claims data.";
+        }
+        loadData();
+        setInterval(loadData, 30000);
+    </script>
 </body>
 </html>
