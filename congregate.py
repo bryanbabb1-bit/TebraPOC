@@ -25,10 +25,17 @@ if __name__ == "__main__":
         data = {'claims': [], 'revenue': [], 'last_update': '', 'stats': {}}
         if os.path.exists('data.json'):
             with open('data.json', 'r') as f:
-                try: data = json.load(f)
+                try: 
+                    loaded = json.load(f)
+                    data.update(loaded) # Merge old data safely
                 except: pass
+        
+        # THE FIX: Guarantee these buckets exist even if the old JSON didn't have them
+        if 'stats' not in data: data['stats'] = {}
+        if 'claims' not in data: data['claims'] = []
+        if 'revenue' not in data: data['revenue'] = []
 
-        # 3. Smart Processing (The Fix)
+        # 3. Smart Processing
         if 'Amount_Billed' in df.columns:
             print("Processing as CLAIMS data based on columns...")
             data['claims'] = df.to_dict(orient='records')
@@ -58,5 +65,3 @@ if __name__ == "__main__":
         except:
             pass
         sys.exit(1)
-
-
