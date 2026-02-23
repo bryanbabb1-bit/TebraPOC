@@ -1,8 +1,8 @@
 name: Update Dashboard Data
 on:
-  workflow_dispatch: # Allows you to trigger this manually
+  workflow_dispatch:
   schedule:
-    - cron: '0 12 * * *' # Runs daily at 7:00 AM CST (12:00 UTC)
+    - cron: '0 12 * * *'
 
 jobs:
   build:
@@ -16,18 +16,16 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Force Install Dependencies to Workspace
+      - name: Install Box and Pandas
         run: |
           python -m pip install --upgrade pip
-          # Installs libraries directly into the repo folder so the script can see them
+          # We install both legacy and modern to be safe
           python -m pip install pandas boxsdk box-sdk-gen --target .
 
       - name: Run Congregator Script
         env:
-          # Pulls the secrets you saved in GitHub Settings
           BOX_CLIENT_ID: ${{ secrets.BOX_CLIENT_ID }}
           BOX_CLIENT_SECRET: ${{ secrets.BOX_CLIENT_SECRET }}
-          # Tells Python to prioritize the current folder for libraries
           PYTHONPATH: .
         run: python congregate.py
 
@@ -36,6 +34,5 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add data.json
-          # Only commits if the data.json actually changed
           git commit -m "Automated data update from Box" || exit 0
           git push
