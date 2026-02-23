@@ -8,8 +8,8 @@ def get_box_client():
     client_secret = os.environ.get('BOX_CLIENT_SECRET')
     enterprise_id = '1444288525'
 
-    print("Authenticating with Stable Legacy SDK...")
-    # This specific handshake is the industry standard for Box CCG
+    print("Authenticating with Box Legacy SDK...")
+    # This is the proven handshake for Client Credentials Grant
     auth = CCGAuth(
         client_id=client_id,
         client_secret=client_secret,
@@ -21,12 +21,13 @@ def get_latest_file_id(client, folder_id, name_prefix):
     """Finds the newest file in a folder starting with a prefix."""
     print(f"Scanning Folder {folder_id} for newest '{name_prefix}' file...")
     
-    # Get all items in the folder using stable legacy logic
+    # Get all items in the folder
     folder_items = client.folder(folder_id=folder_id).get_items()
 
     latest_file = None
     for item in folder_items:
         if item.type == 'file' and item.name.lower().startswith(name_prefix.lower()):
+            # Using content_modified_at for the most accurate 'latest' check
             if latest_file is None or item.content_modified_at > latest_file.content_modified_at:
                 latest_file = item
 
@@ -39,7 +40,6 @@ def congregate_data():
     print("--- Starting Smart Folder Sync ---")
     client = get_box_client()
     
-    # Your Reports Folder ID
     FOLDER_REPORTS_ID = '367459660638' 
 
     targets = {
@@ -54,23 +54,21 @@ def congregate_data():
         if file_id:
             local_filename = f"{prefix}.csv"
             print(f"Downloading {real_name}...")
-            
             with open(local_filename, 'wb') as f:
                 client.file(file_id).download_to(f)
-            
             downloaded_files.append(local_filename)
         else:
-            print(f"CRITICAL: No file found starting with '{prefix}' in folder {folder_id}")
+            print(f"CRITICAL: No file found starting with '{prefix}'")
 
     if len(downloaded_files) < 2:
-        print("Sync Aborted: Required files missing from Box.")
+        print("Sync Aborted: Missing files.")
         return
 
     try:
         df_a = pd.read_csv('Group_A_Claims.csv')
         df_b = pd.read_csv('Group_B_Revenue.csv')
 
-        # PractiSynergy Column Mapping
+        # Clean/Rename Columns
         df_a = df_a.rename(columns={'Provider_Name': 'Provider', 'Amount_Billed': 'Amount'})
         df_b = df_b.rename(columns={'Doctor': 'Provider', 'Gross_Charge': 'Amount'})
 
@@ -85,10 +83,10 @@ def congregate_data():
         with open('data.json', 'w') as f:
             json.dump(summary, f, indent=4)
         
-        print(f"SUCCESS: Dashboard updated via Legacy SDK.")
+        print(f"SUCCESS: Dashboard data updated.")
 
     except Exception as e:
-        print(f"Error during data processing: {e}")
+        print(f"Error processing data: {e}")
 
 if __name__ == "__main__":
     congregate_data()
