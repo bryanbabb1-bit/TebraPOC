@@ -1,84 +1,53 @@
-import os
-import sys
-import json
-import pandas as pd
-import requests
+name: Box Data Sync
 
-def get_access_token():
-    url = "https://api.box.com/oauth2/token"
-    # Enterprise ID
-    ent_id = '1444288525' 
-    
-    data = {
-        'grant_type': 'client_credentials',
-        'client_id': os.environ.get('BOX_CLIENT_ID'),
-        'client_secret': os.environ.get('BOX_CLIENT_SECRET'),
-        'box_subject_type': 'enterprise',
-        'box_subject_id': ent_id
-    }
-    res = requests.post(url, data=data)
-    res.raise_for_status()
-    return res.json()['access_token']
+on:
+  workflow_dispatch:
+    inputs:
+      box_file_id:
+        description: 'The Box File ID from Pipedream'
+        required: true
+      box_file_name:
+        description: 'The Box File Name (Optional)'
+        required: false
 
-def clean_curr(val):
-    if pd.isna(val) or val == '': return 0.0
-    return float(str(val).replace('$', '').replace(',', '').strip() or 0)
+jobs:
+  process-box-file:
+    runs-on: ubuntu-latest
+    # Explicitly grant the Action permission to modify files in the repo
+    permissions:
+      contents: write 
 
-if __name__ == "__main__":
-    target_id = sys.argv[1] if len(sys.argv) > 1 else None
-    if not target_id: sys.exit(1)
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    # The Shared Link you generated
-    SHARED_LINK = "https://practisynergy.box.com/s/zqvid0gi7aenuvd7arh9zuizfptep209"
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-    try:
-        token = get_access_token()
-        
-        # THE FIX: Pass the Shared Link in the Boxapi header
-        headers = {
-            'Authorization': f'Bearer {token}',
-            'Boxapi': f'shared_link={SHARED_LINK}'
-        }
-        
-        # 1. Download Content
-        dl_res = requests.get(f"https://api.box.com/2.0/files/{target_id}/content", headers=headers)
-        
-        if dl_res.status_code != 200:
-            print(f"SHARED LINK DOWNLOAD FAILED: {dl_res.status_code}")
-            print(f"Details: {dl_res.text}")
-            sys.exit(1)
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas requests
 
-        with open("temp.csv", "wb") as f: f.write(dl_res.content)
-        
-        # 2. Process the CSV
-        df = pd.read_csv("temp.csv")
-        df.columns = [str(c).strip() for c in df.columns] 
-        
-        meta = requests.get(f"https://api.box.com/2.0/files/{target_id}", headers=headers).json()
-        file_name = meta.get('name', 'file.csv').lower()
-        
-        # 3. Build/Maintain JSON Structure
-        data = {'claims': [], 'revenue': [], 'last_update': '', 'stats': {}}
-        if os.path.exists('data.json'):
-            with open('data.json', 'r') as f:
-                try: data = json.load(f)
-                except: pass
+      - name: Run Congregator Engine
+        env:
+          BOX_CLIENT_ID: ${{ secrets.BOX_CLIENT_ID }}
+          BOX_CLIENT_SECRET: ${{ secrets.BOX_CLIENT_SECRET }}
+          NEW_FILE_ID: ${{ github.event.inputs.box_file_id }}
+        run: |
+          python congregate.py "$NEW_FILE_ID"
 
-        if 'claim' in file_name:
-            data['claims'] = df.to_dict(orient='records')
-            data['stats']['total_claims_value'] = df['Amount_Billed'].apply(clean_curr).sum()
-        else:
-            data['revenue'] = df.to_dict(orient='records')
-            data['stats']['total_charges'] = df['Gross_Charge'].apply(clean_curr).sum()
-            data['stats']['total_collected'] = df['Net_Collected'].apply(clean_curr).sum()
-
-        data['last_update'] = pd.Timestamp.now().strftime('%Y-%m-%d %I:%M %p')
-        
-        with open('data.json', 'w') as f:
-            json.dump(data, f, indent=4)
-        
-        print(f"SUCCESS: Synced {len(df)} rows from {file_name} using Shared Link.")
-
-    except Exception as e:
-        print(f"PROCESS ERROR: {str(e)}")
-        sys.exit(1)
+      - name: Commit and Push Dashboard Data
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          
+          # This line prevents the Action from crashing if the data didn't change
+          git diff --quiet && git diff --staged --quiet || git commit -m "Auto-sync Box data: ${{ github.event.inputs.box_file_name || 'Update' }}"
+          
+          # Pull latest changes to avoid conflicts, then push
+          git pull --rebase origin main
+          git push
