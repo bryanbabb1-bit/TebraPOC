@@ -7,7 +7,7 @@
             "Service_Date": "2026-02-15",
             "Gross_Charge": 450,
             "Net_Collected": 380,
-            "Denial_Reason": NaN
+            "Denial_Reason": ""
         },
         {
             "Reference_Num": "REF-A2",
@@ -23,7 +23,7 @@
             "Service_Date": "2026-02-17",
             "Gross_Charge": 850,
             "Net_Collected": 800,
-            "Denial_Reason": NaN
+            "Denial_Reason": ""
         },
         {
             "Reference_Num": "REF-A4",
@@ -31,7 +31,7 @@
             "Service_Date": "2026-02-17",
             "Gross_Charge": 20000,
             "Net_Collected": 12000,
-            "Denial_Reason": NaN
+            "Denial_Reason": ""
         },
         {
             "Reference_Num": "REF-A5",
@@ -39,15 +39,15 @@
             "Service_Date": "2026-02-18",
             "Gross_Charge": 9999,
             "Net_Collected": 9999,
-            "Denial_Reason": NaN
+            "Denial_Reason": ""
         }
     ],
-    "last_update": "2026-02-23 03:41 PM",
+    "last_update": "2026-02-23 03:54 PM",
     "stats": {
         "total_charges": 32499.0,
         "total_collected": 23179.0
     },
     "total_claims": 0,
-    "total_revenue": 0,
+    "total_revenue": 23179.0,
     "last_file_processed": "2143781771956"
 }
