@@ -1,5 +1,78 @@
 {
-    "claims": [],
+    "claims": [
+        {
+            "Claim_ID": "CLM-9901",
+            "Provider_Name": "Dr. Smith",
+            "Date_Submitted": "2026-02-15",
+            "Amount_Billed": 450,
+            "Status": "Paid",
+            "Error_Code": ""
+        },
+        {
+            "Claim_ID": "CLM-9902",
+            "Provider_Name": "Dr. Jones",
+            "Date_Submitted": "2026-02-16",
+            "Amount_Billed": 1200,
+            "Status": "Denied",
+            "Error_Code": "ERR-404"
+        },
+        {
+            "Claim_ID": "CLM-9903",
+            "Provider_Name": "Dr. Smith",
+            "Date_Submitted": "2026-02-16",
+            "Amount_Billed": 320,
+            "Status": "Pending",
+            "Error_Code": ""
+        },
+        {
+            "Claim_ID": "CLM-9904",
+            "Provider_Name": "Dr. Steve",
+            "Date_Submitted": "2026-02-18",
+            "Amount_Billed": 50000,
+            "Status": "Paid",
+            "Error_Code": ""
+        },
+        {
+            "Claim_ID": "CLM-9904",
+            "Provider_Name": "Dr. Amy",
+            "Date_Submitted": "2026-02-18",
+            "Amount_Billed": 2999,
+            "Status": "Pending",
+            "Error_Code": ""
+        },
+        {
+            "Claim_ID": "CLM-9905",
+            "Provider_Name": "Dr. Jones",
+            "Date_Submitted": "2026-02-16",
+            "Amount_Billed": 1200,
+            "Status": "Denied",
+            "Error_Code": "ERR-404"
+        },
+        {
+            "Claim_ID": "CLM-9906",
+            "Provider_Name": "Dr. Smith",
+            "Date_Submitted": "2026-02-21",
+            "Amount_Billed": 998,
+            "Status": "Pending",
+            "Error_Code": ""
+        },
+        {
+            "Claim_ID": "CLM-9907",
+            "Provider_Name": "Dr. Steve",
+            "Date_Submitted": "2026-02-18",
+            "Amount_Billed": 50000,
+            "Status": "Paid",
+            "Error_Code": ""
+        },
+        {
+            "Claim_ID": "CLM-9908",
+            "Provider_Name": "Dr. Bob",
+            "Date_Submitted": "2026-02-20",
+            "Amount_Billed": 15450,
+            "Status": "Pending",
+            "Error_Code": ""
+        }
+    ],
     "revenue": [
         {
             "Reference_Num": "REF-A1",
@@ -42,12 +115,13 @@
             "Denial_Reason": ""
         }
     ],
-    "last_update": "2026-02-23 04:04 PM",
+    "last_update": "2026-02-23 04:18 PM",
     "stats": {
         "total_charges": 32499.0,
-        "total_collected": 23179.0
+        "total_collected": 23179.0,
+        "total_claims_value": 122617.0
     },
-    "total_claims": 0,
+    "total_claims": 122617.0,
     "total_revenue": 23179.0,
     "last_file_processed": "2143781771956"
 }
