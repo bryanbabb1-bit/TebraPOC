@@ -11,15 +11,23 @@ def congregate_data():
     client_secret = os.environ.get('BOX_CLIENT_SECRET')
     enterprise_id = '1444288525'
 
-    # 2. Authentication with the Modern SDK
-    print("Connecting to Box via Modern SDK...")
+    # 2. Sequential Authentication Setup
+    print("Connecting to Box via Modern SDK (Compatibility Mode)...")
+    
+    # Initialize config with ONLY core credentials
     config = CCGConfig(
         client_id=client_id,
-        client_secret=client_secret,
-        box_subject_type="enterprise",
-        box_subject_id=enterprise_id
+        client_secret=client_secret
     )
+    
+    # Create the Auth object
     auth = BoxCCGAuth(config)
+    
+    # Manually assign the subject details required for the CCG handshake
+    auth.box_subject_type = "enterprise"
+    auth.box_subject_id = enterprise_id
+    
+    # Initialize the client
     client = BoxClient(auth)
 
     # 3. Static IDs Provided by Bryan
@@ -28,7 +36,6 @@ def congregate_data():
 
     # 4. Download
     print(f"Downloading Claims and Revenue files...")
-    # Use the Modern SDK download method
     claims_content = client.files.download_file(CLAIMS_FILE_ID)
     with open('claims.csv', 'wb') as f:
         f.write(claims_content)
