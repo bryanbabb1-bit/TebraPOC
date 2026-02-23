@@ -2,32 +2,34 @@ import pandas as pd
 import json
 import os
 import sys
-from boxsdk import CCGAuth, Client
 
-# Ensure local libraries in the current directory are prioritized
+# Force the script to look in the current folder for the Box libraries
 sys.path.append(os.getcwd())
 
+from box_sdk_gen import BoxClient, BoxCCGAuth, CCGConfig
+
 def get_box_client():
-    """Uses the stable Legacy SDK authentication logic."""
     client_id = os.environ.get('BOX_CLIENT_ID')
     client_secret = os.environ.get('BOX_CLIENT_SECRET')
     enterprise_id = '1444288525'
 
-    print("Authenticating with stable Legacy SDK...")
-    # This is the exact handshake that worked for us earlier
-    auth = CCGAuth(
+    print("Authenticating with Box...")
+    # Using the configuration that matches the latest 2026 SDK install
+    config = CCGConfig(
         client_id=client_id,
         client_secret=client_secret,
-        enterprise_id=enterprise_id
+        box_subject_type="enterprise",
+        box_subject_id=enterprise_id
     )
-    return Client(auth)
+    auth = BoxCCGAuth(config)
+    return BoxClient(auth)
 
 def get_latest_file_id(client, folder_id, name_prefix):
     """Finds the newest file in a folder starting with a prefix."""
     print(f"Scanning Folder {folder_id} for newest '{name_prefix}' file...")
     
-    # Using the stable legacy 'get_items' method
-    items = client.folder(folder_id).get_items()
+    # Modern SDK method to list items
+    items = client.folders.get_folder_items(folder_id).entries
 
     latest_file = None
     for item in items:
@@ -59,8 +61,10 @@ def congregate_data():
             local_filename = f"{prefix}.csv"
             print(f"Downloading {real_name}...")
             
+            # Modern SDK download method
+            file_content = client.files.download_file(file_id)
             with open(local_filename, 'wb') as f:
-                client.file(file_id).download_to(f)
+                f.write(file_content)
             
             downloaded_files.append(local_filename)
         else:
