@@ -3,10 +3,10 @@ on:
   workflow_dispatch:
     inputs:
       box_file_id:
-        description: 'Box File ID'
+        description: 'ID from Pipedream'
         required: true
       box_file_name:
-        description: 'Box File Name'
+        description: 'Filename from Pipedream'
         required: false
 
 jobs:
@@ -37,5 +37,6 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add data.json
           git commit -m "Box Sync: ${{ github.event.inputs.box_file_name }}" || exit 0
+          # Fix for the "rejected" push error
           git pull --rebase origin main
           git push https://x-access-token:${{ secrets.WORKFLOW_TOKEN }}@github.com/${{ github.repository }}.git
