@@ -1,7 +1,52 @@
 {
     "claims": [],
-    "revenue": [],
-    "last_update": "2026-02-23 05:22 AM",
+    "revenue": [
+        {
+            "Reference_Num": "REF-A1",
+            "Doctor": "Smith, A",
+            "Service_Date": "2026-02-15",
+            "Gross_Charge": 450,
+            "Net_Collected": 380,
+            "Denial_Reason": NaN
+        },
+        {
+            "Reference_Num": "REF-A2",
+            "Doctor": "Jones, B",
+            "Service_Date": "2026-02-15",
+            "Gross_Charge": 1200,
+            "Net_Collected": 0,
+            "Denial_Reason": "Coding Error"
+        },
+        {
+            "Reference_Num": "REF-A3",
+            "Doctor": "Brown, C",
+            "Service_Date": "2026-02-17",
+            "Gross_Charge": 850,
+            "Net_Collected": 800,
+            "Denial_Reason": NaN
+        },
+        {
+            "Reference_Num": "REF-A4",
+            "Doctor": "Curry, S",
+            "Service_Date": "2026-02-17",
+            "Gross_Charge": 20000,
+            "Net_Collected": 12000,
+            "Denial_Reason": NaN
+        },
+        {
+            "Reference_Num": "REF-A5",
+            "Doctor": "James, B",
+            "Service_Date": "2026-02-18",
+            "Gross_Charge": 9999,
+            "Net_Collected": 9999,
+            "Denial_Reason": NaN
+        }
+    ],
+    "last_update": "2026-02-23 03:41 PM",
+    "stats": {
+        "total_charges": 32499.0,
+        "total_collected": 23179.0
+    },
     "total_claims": 0,
     "total_revenue": 0,
     "last_file_processed": "2143781771956"
