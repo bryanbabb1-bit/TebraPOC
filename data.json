@@ -1,17 +1,8 @@
 {
-    "total_revenue": 0,
-    "provider_breakdown": {
-        "Brown, C": 850.0,
-        "Dr. Jones": 1200.0,
-        "Dr. Smith": 770.0,
-        "Jones, B": 1200.0,
-        "Smith, A": 450.0
-    },
-    "last_updated": "2026-02-22 21:41",
-    "latest_upload": [],
-    "last_file_processed": "2143766334101",
-    "revenue": [],
-    "last_update": "2026-02-23 05:17 AM",
     "claims": [],
-    "total_claims": 0
+    "revenue": [],
+    "last_update": "2026-02-23 05:19 AM",
+    "total_claims": 0,
+    "total_revenue": 0,
+    "last_file_processed": "2143781111723"
 }
