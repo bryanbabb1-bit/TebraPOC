@@ -3,7 +3,7 @@ import json
 import os
 import sys
 
-# Force the script to look in the current folder for the Box libraries
+# Ensure local libraries are prioritized
 sys.path.append(os.getcwd())
 
 from box_sdk_gen import BoxClient, BoxCCGAuth, CCGConfig
@@ -13,15 +13,21 @@ def get_box_client():
     client_secret = os.environ.get('BOX_CLIENT_SECRET')
     enterprise_id = '1444288525'
 
-    print("Authenticating with Box...")
-    # Using the configuration that matches the latest 2026 SDK install
+    print("Authenticating with Box (Compatibility Mode)...")
+    
+    # Initialize config with ONLY core credentials
     config = CCGConfig(
         client_id=client_id,
-        client_secret=client_secret,
-        box_subject_type="enterprise",
-        box_subject_id=enterprise_id
+        client_secret=client_secret
     )
+    
+    # Create the Auth object
     auth = BoxCCGAuth(config)
+    
+    # Manually assign the subject details required for CCG
+    auth.box_subject_type = "enterprise"
+    auth.box_subject_id = enterprise_id
+    
     return BoxClient(auth)
 
 def get_latest_file_id(client, folder_id, name_prefix):
@@ -46,6 +52,7 @@ def congregate_data():
     print("--- Starting Smart Folder Sync ---")
     client = get_box_client()
     
+    # Reports folder ID: 367459660638
     FOLDER_REPORTS_ID = '367459660638' 
 
     targets = {
@@ -78,6 +85,7 @@ def congregate_data():
         df_a = pd.read_csv('Group_A_Claims.csv')
         df_b = pd.read_csv('Group_B_Revenue.csv')
 
+        # Map Tebra column names to unified labels
         df_a = df_a.rename(columns={'Provider_Name': 'Provider', 'Amount_Billed': 'Amount'})
         df_b = df_b.rename(columns={'Doctor': 'Provider', 'Gross_Charge': 'Amount'})
 
@@ -92,10 +100,10 @@ def congregate_data():
         with open('data.json', 'w') as f:
             json.dump(summary, f, indent=4)
         
-        print(f"SUCCESS: Dashboard updated.")
+        print(f"SUCCESS: Dashboard updated at {summary['last_updated']}")
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error during data processing: {e}")
 
 if __name__ == "__main__":
     congregate_data()
