@@ -2,18 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PractiSynergy | Executive Portal</title>
+    <title>PractiSynergy Portal</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root { --ps-navy: #002D5B; --ps-cyan: #00AEEF; --ps-light: #F8FAFC; }
         body { font-family: 'Montserrat', sans-serif; background-color: var(--ps-light); margin: 0; display: none; } 
-        .navbar { background: white; padding: 15px 40px; display: flex; justify-content: space-between; border-bottom: 4px solid var(--ps-cyan); box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .navbar { background: white; padding: 15px 40px; border-bottom: 4px solid var(--ps-cyan); display: flex; justify-content: space-between; }
         .logo { font-weight: 700; font-size: 22px; color: var(--ps-navy); }
         .logo span { color: var(--ps-cyan); }
-        .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
-        .card { background: white; border-radius: 12px; padding: 30px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.05); border-top: 5px solid var(--ps-navy); margin-bottom: 20px; }
-        .rev-val { font-size: 48px; color: var(--ps-navy); font-weight: 700; margin: 10px 0; }
+        .container { max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        .card { background: white; border-radius: 12px; padding: 30px; text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.05); margin-bottom: 20px; border-top: 5px solid var(--ps-navy); }
         .footer { text-align: center; color: #94a3b8; font-size: 11px; margin-top: 50px; }
     </style>
 </head>
@@ -21,30 +20,29 @@
     <nav class="navbar"><div class="logo">Practi<span>Synergy</span></div></nav>
     <div class="container">
         <div class="card">
-            <div style="color:var(--ps-cyan); font-weight:700; font-size:12px; text-transform:uppercase;">Total Aggregated Revenue</div>
-            <div id="revenue-total" class="rev-val">$0.00</div>
-            <div id="last-updated" style="font-size:12px; color:#64748b;"></div>
+            <div id="revenue-total" style="font-size: 48px; font-weight: 700; color: var(--ps-navy);">$0.00</div>
+            <div id="last-updated" style="font-size: 12px; color: #64748b;"></div>
         </div>
-        <div class="card"><h3>Revenue by Provider</h3><canvas id="revenueChart"></canvas></div>
-        <div class="footer">CONFIDENTIAL | POC ACCESS ONLY | PASSWORD: PSpoc26</div>
+        <div class="card"><canvas id="revenueChart"></canvas></div>
+        <div class="footer">PROPRIETARY | PW: PSpoc26</div>
     </div>
     <script>
-        const pw = prompt("PractiSynergy Login:");
+        const pw = prompt("Login:");
         if (pw === "PSpoc26") {
             document.body.style.display = "block";
             fetch('data.json').then(r => r.json()).then(data => {
                 document.getElementById('revenue-total').innerText = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.total_revenue);
-                document.getElementById('last-updated').innerText = "Last Box Sync: " + data.last_updated;
+                document.getElementById('last-updated').innerText = "Last Updated: " + data.last_updated;
                 new Chart(document.getElementById('revenueChart'), {
                     type: 'bar',
                     data: {
                         labels: Object.keys(data.provider_breakdown),
-                        datasets: [{ data: Object.values(data.provider_breakdown), backgroundColor: '#002D5B', borderRadius: 5 }]
+                        datasets: [{ data: Object.values(data.provider_breakdown), backgroundColor: '#002D5B' }]
                     },
                     options: { plugins: { legend: { display: false } } }
                 });
             });
-        } else { window.location.href = "https://practisynergy.com/"; }
+        } else { window.location.href = "https://practisynergy.com"; }
     </script>
 </body>
 </html>
