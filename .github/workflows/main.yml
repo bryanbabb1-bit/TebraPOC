@@ -1,6 +1,13 @@
 name: Update Dashboard Data
 on:
   workflow_dispatch:
+    inputs:
+      box_file_id:
+        description: 'The ID of the file from Box'
+        required: true
+      box_file_name:
+        description: 'The name of the file from Box'
+        required: false
 
 jobs:
   build:
@@ -14,20 +21,20 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies
-        run: |
-          pip install pandas requests
-
-      - name: Run Congregator Script
+      - name: Run Congregator
         env:
           BOX_CLIENT_ID: ${{ secrets.BOX_CLIENT_ID }}
           BOX_CLIENT_SECRET: ${{ secrets.BOX_CLIENT_SECRET }}
-        run: python congregate.py
+          # This pulls the data from the Pipedream input
+          NEW_FILE_ID: ${{ github.event.inputs.box_file_id }}
+        run: |
+          pip install pandas requests
+          python congregate.py "$NEW_FILE_ID"
 
       - name: Commit and Push
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add data.json
-          git commit -m "Restructured using REST API" || exit 0
+          git commit -m "Webhook update: ${{ github.event.inputs.box_file_name }}" || exit 0
           git push
