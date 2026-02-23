@@ -6,126 +6,228 @@
     <title>PractiSynergy POC Dashboard</title>
     <style>
         :root {
-            --primary: #2c3e50;
-            --secondary: #34495e;
-            --accent: #3498db;
-            --success: #27ae60;
-            --warning: #f39c12;
-            --bg: #f4f7f6;
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --text-muted: #7f8c8d;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
         }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); padding: 40px; color: var(--primary); }
-        .container { max-width: 1000px; margin: auto; }
-        header { text-align: center; margin-bottom: 40px; }
-        
-        /* KPI Section */
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .kpi-label { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: #7f8c8d; font-weight: bold; }
-        .kpi-value { font-size: 2rem; font-weight: 800; margin: 10px 0; color: var(--primary); }
-        
-        /* Progress Bar */
-        .progress-container { background: #eee; height: 12px; border-radius: 6px; overflow: hidden; margin-top: 15px; }
-        .progress-bar { background: var(--success); height: 100%; transition: width 1s ease-in-out; }
-        
-        /* Table Styles */
-        .table-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .data-row { display: flex; justify-content: space-between; padding: 15px 10px; border-bottom: 1px solid #f1f1f1; align-items: center; }
-        .data-row:last-child { border-bottom: none; }
-        .status-pill { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
-        .paid { background: #eafaf1; color: var(--success); }
-        .denied { background: #fdedec; color: #e74c3c; }
-        .pending { background: #fef9e7; color: var(--warning); }
-        
-        .update-tag { font-size: 0.8rem; color: #bdc3c7; margin-top: 5px; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            padding: 20px 20px 60px 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            margin-bottom: 5px;
+            color: var(--primary-color);
+        }
+
+        .heartbeat {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .dashboard-container {
+            max-width: 700px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .kpi-value {
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin: 10px 0;
+            color: var(--primary-color);
+        }
+
+        .kpi-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .progress-bg {
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            height: 12px;
+            width: 100%;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background-color: var(--secondary-color);
+            height: 100%;
+            width: 0%;
+            transition: width 1s ease-in-out;
+        }
+
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.4rem;
+            color: var(--primary-color);
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .data-row:last-child {
+            border-bottom: none;
+        }
+
+        .status-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            background-color: #e8f8f5;
+            color: #1abc9c;
+            margin-top: 5px;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <header>
+    <div class="header">
         <h1>PractiSynergy POC Dashboard</h1>
-        <div class="update-tag">System Heartbeat: <span id="sync-time">Syncing...</span></div>
-    </header>
+        <div class="heartbeat">System Heartbeat: <span id="sync-time">Syncing...</span></div>
+    </div>
 
-    <div class="kpi-grid">
+    <div class="dashboard-container">
+        
         <div class="card">
-            <div class="kpi-label">Net Collected</div>
+            <div class="card-title">Net Collected</div>
             <div class="kpi-value" id="kpi-collected">$0.00</div>
-            <div class="kpi-label">vs. <span id="kpi-charges">$0</span> Gross Charges</div>
-            <div class="progress-container">
-                <div id="collection-bar" class="progress-bar" style="width: 0%"></div>
+            <div class="kpi-subtitle">VS. $<span id="kpi-charges">0</span> GROSS CHARGES</div>
+            <div class="progress-bg">
+                <div class="progress-bar" id="collection-bar"></div>
             </div>
         </div>
 
         <div class="card">
-            <div class="kpi-label">Total Claims Value</div>
+            <div class="card-title">Total Claims Value</div>
             <div class="kpi-value" id="kpi-claims-total">$0.00</div>
-            <div id="claims-count" class="kpi-label">0 Records Processed</div>
+            <div class="kpi-subtitle" id="claims-count">0 RECORDS PROCESSED</div>
         </div>
+
+        <div class="card">
+            <h2>Detailed Activity</h2>
+            <div id="claims-list">
+                <div style='text-align:center; padding:20px; color:#7f8c8d;'>Waiting for Box sync...</div>
+            </div>
+        </div>
+
     </div>
 
-    <div class="table-card">
-        <h2>Detailed Claims Activity</h2>
-        <div id="claims-list">
-            <div style="text-align: center; color: #bdc3c7; padding: 40px;">Waiting for Box sync...</div>
-        </div>
-    </div>
-</div>
+    <script>
+        async function refreshDashboard() {
+            try {
+                // Force browser to fetch new JSON every time
+                const response = await fetch('data.json?v=' + Date.now());
+                const data = await response.json();
+                const stats = data.stats || {};
+                
+                // 1. Update Heartbeat
+                const syncTimeEl = document.getElementById('sync-time');
+                if (syncTimeEl) syncTimeEl.innerText = data.last_update || "Connecting...";
 
-<script>
-    async function refreshDashboard() {
-        try {
-            // Force browser to fetch new JSON every time
-            const response = await fetch('data.json?v=' + Date.now());
-            const data = await response.json();
-            const stats = data.stats || {};
-            
-            // 1. Update Heartbeat
-            document.getElementById('sync-time').innerText = data.last_update || "Connecting...";
+                // 2. Update Revenue KPIs
+                const collected = stats.total_collected || 0;
+                const charges = stats.total_charges || 1; // avoid divide by zero
+                const percentage = Math.min((collected / charges) * 100, 100);
 
-            // 2. Update Revenue KPIs
-            const collected = stats.total_collected || 0;
-            const charges = stats.total_charges || 1; // avoid divide by zero
-            const percentage = Math.min((collected / charges) * 100, 100);
+                const kpiCollected = document.getElementById('kpi-collected');
+                if (kpiCollected) kpiCollected.innerText = '$' + collected.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+                const kpiCharges = document.getElementById('kpi-charges');
+                if (kpiCharges) kpiCharges.innerText = charges.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+                const collectionBar = document.getElementById('collection-bar');
+                if (collectionBar) collectionBar.style.width = percentage + '%';
 
-            document.getElementById('kpi-collected').innerText = '$' + collected.toLocaleString();
-            document.getElementById('kpi-charges').innerText = charges.toLocaleString();
-            document.getElementById('collection-bar').style.width = percentage + '%';
+                // 3. Update Claims KPIs
+                const kpiClaimsTotal = document.getElementById('kpi-claims-total');
+                if (kpiClaimsTotal) kpiClaimsTotal.innerText = '$' + (stats.total_claims_value || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                
+                const claimsCount = document.getElementById('claims-count');
+                const totalRecords = (data.claims || []).length + (data.revenue || []).length;
+                if (claimsCount) claimsCount.innerText = totalRecords + " RECORDS PROCESSED";
 
-            // 3. Update Claims KPIs
-            document.getElementById('kpi-claims-total').innerText = '$' + (stats.total_claims_value || 0).toLocaleString();
-            document.getElementById('claims-count').innerText = (data.claims || []).length + " Active Records";
+                // 4. Update Activity List (Combines Revenue and Claims for display)
+                const listData = (data.claims && data.claims.length > 0) ? data.claims : (data.revenue || []);
+                const container = document.getElementById('claims-list');
+                
+                if (container) {
+                    if (listData.length === 0) {
+                        container.innerHTML = "<div style='text-align:center; padding:20px; color:#7f8c8d;'>No records found in current file.</div>";
+                    } else {
+                        container.innerHTML = listData.map(c => {
+                            const statusClass = (c.Status || '').toLowerCase();
+                            const val = c.Amount_Billed || c.Gross_Charge || 0;
+                            return `
+                                <div class="data-row">
+                                    <div>
+                                        <strong>${c.Claim_ID || c.Reference_Num || 'Unknown Ref'}</strong><br>
+                                        <span style="font-size: 0.8rem; color: #7f8c8d;">${c.Provider_Name || c.Doctor || 'Unknown Provider'}</span>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-weight: bold; color: #2c3e50;">$${val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                                        <span class="status-pill ${statusClass}">${c.Status || 'Processed'}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
 
-            // 4. Update Claims List
-            const claimsList = data.claims || [];
-            const container = document.getElementById('claims-list');
-            
-            if (claimsList.length === 0) {
-                container.innerHTML = "<div style='text-align:center; padding:20px;'>No claims data found.</div>";
-            } else {
-                container.innerHTML = claimsList.map(c => {
-                    const statusClass = (c.Status || '').toLowerCase();
-                    return `
-                        <div class="data-row">
-                            <div>
-                                <strong>${c.Claim_ID}</strong><br>
-                                <span style="font-size: 0.8rem; color: #7f8c8d;">${c.Provider_Name}</span>
-                            </div>
-                            <div style="text-align: right;">
-                                <div style="font-weight: bold;">$${(c.Amount_Billed || 0).toLocaleString()}</div>
-                                <span class="status-pill ${statusClass}">${c.Status || 'Unknown'}</span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+            } catch (err) {
+                console.error("Dashboard Error:", err);
+                const syncTimeEl = document.getElementById('sync-time');
+                if (syncTimeEl) syncTimeEl.innerText = "Error Loading Data - Check Console";
             }
-
-        } catch (err) {
-            console.error("Dashboard Error:", err);
         }
-    }
 
-    // Initial load
-    refreshDashboard();
-    // Auto-refresh every 30 seconds
-    setInterval(refreshDashboard
+        // Initial load
+        refreshDashboard();
+        // Auto-refresh every 30 seconds
+        setInterval(refreshDashboard, 30000);
+    </script>
+</body>
+</html>
