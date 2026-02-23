@@ -17,75 +17,54 @@ def get_access_token():
     response.raise_for_status()
     return response.json()['access_token']
 
+def clean_currency(val):
+    if pd.isna(val): return 0.0
+    return float(str(val).replace('$', '').replace(',', '').strip() or 0)
+
 if __name__ == "__main__":
     target_id = sys.argv[1] if len(sys.argv) > 1 else None
-    if not target_id: 
-        print("CRITICAL: No File ID received.")
-        sys.exit(1)
+    if not target_id: sys.exit(1)
 
     try:
         token = get_access_token()
         headers = {'Authorization': f'Bearer {token}'}
         
-        # 1. Get exact filename from Box
         meta = requests.get(f"https://api.box.com/2.0/files/{target_id}", headers=headers).json()
-        file_name = meta.get('name', 'Unknown.csv').lower()
-        print(f"--- Processing File: {file_name} ---")
-
-        # 2. Download Content
+        file_name = meta.get('name', 'Unknown.csv')
+        
         content = requests.get(f"https://api.box.com/2.0/files/{target_id}/content", headers=headers)
         with open("temp.csv", "wb") as f: f.write(content.content)
         
-        # 3. Load CSV and Standardize Headers (Lowercase + No Spaces)
         df = pd.read_csv("temp.csv")
-        df.columns = [str(c).strip().lower() for c in df.columns]
-        print(f"Detected Columns: {list(df.columns)}")
-
-        # 4. Prepare fresh Data Structure (Overwrites legacy keys)
-        data = {'claims': [], 'revenue': [], 'last_update': '', 'total_claims': 0, 'total_revenue': 0}
+        # Log columns for debugging in GitHub Actions
+        print(f"File: {file_name} | Columns: {list(df.columns)}")
+        
+        category = 'claims' if 'claim' in file_name.lower() else 'revenue'
+        
+        # Load persistent state
+        data = {'claims': [], 'revenue': [], 'last_update': '', 'stats': {}}
         if os.path.exists('data.json'):
             with open('data.json', 'r') as f:
-                try:
-                    old_data = json.load(f)
-                    # Keep existing data from the OTHER category so we don't wipe it
-                    data['claims'] = old_data.get('claims', [])
-                    data['revenue'] = old_data.get('revenue', [])
+                try: data = json.load(f)
                 except: pass
 
-        # 5. Map Data using your specific headers (but lowercased)
-        new_records = []
-        if 'claim' in file_name:
-            for _, row in df.iterrows():
-                val = str(row.get('amount_billed', 0)).replace('$', '').replace(',', '')
-                new_records.append({
-                    "ID": str(row.get('claim_id', 'N/A')),
-                    "Provider": str(row.get('provider_name', 'Unknown')),
-                    "Amount": float(val or 0),
-                    "Status": str(row.get('status', 'Pending'))
-                })
-            data['claims'] = new_records
-            data['total_claims'] = sum(r['Amount'] for r in new_records)
+        if category == 'claims':
+            # Mapping: Claim_ID, Provider_Name, Amount_Billed, Status
+            data['claims'] = df.to_dict(orient='records')
+            data['stats']['total_claims_value'] = df['Amount_Billed'].apply(clean_currency).sum()
         else:
-            for _, row in df.iterrows():
-                val = str(row.get('net_collected', 0)).replace('$', '').replace(',', '')
-                new_records.append({
-                    "ID": str(row.get('reference_num', 'N/A')),
-                    "Doctor": str(row.get('doctor', 'Unknown')),
-                    "Amount": float(val or 0)
-                })
-            data['revenue'] = new_records
-            data['total_revenue'] = sum(r['Amount'] for r in new_records)
+            # Mapping: Reference_Num, Doctor, Gross_Charge, Net_Collected
+            data['revenue'] = df.to_dict(orient='records')
+            data['stats']['total_charges'] = df['Gross_Charge'].apply(clean_currency).sum()
+            data['stats']['total_collected'] = df['Net_Collected'].apply(clean_currency).sum()
 
-        # 6. Final Save
         data['last_update'] = pd.Timestamp.now().strftime('%Y-%m-%d %I:%M %p')
-        data['last_file_processed'] = target_id
+        data['last_file_id'] = target_id
 
         with open('data.json', 'w') as f:
             json.dump(data, f, indent=4)
-        
-        print(f"SUCCESS: Captured {len(new_records)} records into {file_name}")
-
+        print(f"SUCCESS: Processed {file_name}")
+            
     except Exception as e:
         print(f"MAPPING ERROR: {str(e)}")
         sys.exit(1)
-
