@@ -6,7 +6,8 @@ import requests
 
 def get_access_token():
     url = "https://api.box.com/oauth2/token"
-    ent_id = '1444288525' # Ensure this matches the ID in your Box Account Info
+    # Your verified Enterprise ID
+    ent_id = '1444288525' 
     
     data = {
         'grant_type': 'client_credentials',
@@ -16,10 +17,13 @@ def get_access_token():
         'box_subject_id': ent_id
     }
     res = requests.post(url, data=data)
-    if res.status_code != 200:
-        print(f"AUTH FAILED: {res.text}")
-        sys.exit(1)
+    res.raise_for_status()
     return res.json()['access_token']
+
+def clean_curr(val):
+    if pd.isna(val) or val == '': return 0.0
+    # Cleans symbols and commas to ensure math works
+    return float(str(val).replace('$', '').replace(',', '').strip() or 0)
 
 if __name__ == "__main__":
     target_id = sys.argv[1] if len(sys.argv) > 1 else None
@@ -27,50 +31,53 @@ if __name__ == "__main__":
 
     try:
         token = get_access_token()
-        headers = {'Authorization': f'Bearer {token}'}
         
-        # --- DIAGNOSTIC: WHAT CAN I SEE? ---
-        # We check the parent folder of the file to see if we are actually a collaborator
-        meta = requests.get(f"https://api.box.com/2.0/files/{target_id}", headers=headers).json()
-        parent_id = meta.get('parent', {}).get('id', '0')
+        # THE FIX: Nested your Account ID in the As-User header
+        headers = {
+            'Authorization': f'Bearer {token}',
+            'As-User': '49148430670' 
+        }
         
-        print(f"--- FOLDER CHECK (ID: {parent_id}) ---")
-        folder_res = requests.get(f"https://api.box.com/2.0/folders/{parent_id}/items", headers=headers)
-        if folder_res.status_code == 200:
-            items = [i['name'] for i in folder_res.json().get('entries', [])]
-            print(f"I CAN SEE THESE FILES: {items}")
-        else:
-            print(f"I CANNOT SEE THE FOLDER. Error: {folder_res.text}")
-            print("REMEDY: Re-invite 'AutomationUser_2515661_EOliJ8y4OO@boxdevedition.com' to this folder.")
-
-        # --- DOWNLOAD ATTEMPT ---
+        # 1. Download Content as Bryan
         dl_res = requests.get(f"https://api.box.com/2.0/files/{target_id}/content", headers=headers)
+        
         if dl_res.status_code != 200:
-            print(f"DOWNLOAD FAILED (403). Content: {dl_res.text}")
+            print(f"AS-USER DOWNLOAD FAILED: {dl_res.status_code}")
+            print(f"Details: {dl_res.text}")
             sys.exit(1)
 
         with open("temp.csv", "wb") as f: f.write(dl_res.content)
-        df = pd.read_csv("temp.csv")
         
-        # Standardize headers to handle your samples
-        df.columns = [str(c).strip() for c in df.columns]
+        # 2. Process the CSV
+        df = pd.read_csv("temp.csv")
+        df.columns = [str(c).strip() for c in df.columns] # Remove accidental whitespace in headers
+        
+        meta = requests.get(f"https://api.box.com/2.0/files/{target_id}", headers=headers).json()
         file_name = meta.get('name', 'file.csv').lower()
         
+        # 3. Build/Maintain JSON Structure
         data = {'claims': [], 'revenue': [], 'last_update': '', 'stats': {}}
         if os.path.exists('data.json'):
-            with open('data.json', 'r') as f: data = json.load(f)
+            with open('data.json', 'r') as f:
+                try: data = json.load(f)
+                except: pass
 
         if 'claim' in file_name:
+            # Mapping: Claim_ID, Provider_Name, Amount_Billed, Status
             data['claims'] = df.to_dict(orient='records')
-            data['stats']['total_claims_value'] = df['Amount_Billed'].sum()
+            data['stats']['total_claims_value'] = df['Amount_Billed'].apply(clean_curr).sum()
         else:
+            # Mapping: Gross_Charge, Net_Collected, Doctor
             data['revenue'] = df.to_dict(orient='records')
-            data['stats']['total_charges'] = df['Gross_Charge'].sum()
-            data['stats']['total_collected'] = df['Net_Collected'].sum()
+            data['stats']['total_charges'] = df['Gross_Charge'].apply(clean_curr).sum()
+            data['stats']['total_collected'] = df['Net_Collected'].apply(clean_curr).sum()
 
         data['last_update'] = pd.Timestamp.now().strftime('%Y-%m-%d %I:%M %p')
-        with open('data.json', 'w') as f: json.dump(data, f, indent=4)
-        print(f"SUCCESS: Synced {file_name}")
+        
+        with open('data.json', 'w') as f:
+            json.dump(data, f, indent=4)
+        
+        print(f"SUCCESS: Synced {len(df)} rows from {file_name} using As-User.")
 
     except Exception as e:
         print(f"MAPPING ERROR: {str(e)}")
