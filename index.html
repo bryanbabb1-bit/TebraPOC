@@ -2,48 +2,99 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PractiSynergy POC Dashboard</title>
     <style>
-        body { font-family: sans-serif; background: #f4f7f6; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
-        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-        .update-tag { font-size: 0.8em; color: #7f8c8d; }
-        .claim-row { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
-        .status-paid { color: green; font-weight: bold; }
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --bg: #f4f7f6;
+            --card-bg: #ffffff;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); padding: 20px; color: var(--primary); }
+        .container { max-width: 800px; margin: auto; }
+        header { text-align: center; margin-bottom: 30px; }
+        .card { 
+            background: var(--card-bg); 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+            margin-bottom: 20px;
+        }
+        h2 { border-bottom: 3px solid var(--accent); padding-bottom: 10px; margin-top: 0; }
+        .update-tag { font-size: 0.85em; color: #7f8c8d; font-weight: bold; }
+        .claim-row { 
+            padding: 12px; 
+            border-bottom: 1px solid #eee; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+        }
+        .claim-row:last-child { border-bottom: none; }
+        .status-paid { color: #27ae60; font-weight: 700; background: #eafaf1; padding: 4px 10px; border-radius: 20px; }
+        .empty-state { text-align: center; padding: 20px; color: #95a5a6; font-style: italic; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>PractiSynergy Claims Monitor</h2>
-    <p class="update-tag">Last System Update: <span id="time">-</span></p>
-    <div id="claims-container">Loading latest data...</div>
+<div class="container">
+    <header>
+        <h1>PractiSynergy Data Bridge</h1>
+        <p class="update-tag">System Heartbeat: <span id="time">Connecting...</span></p>
+    </header>
+
+    <div class="card">
+        <h2>Live Claims Monitor</h2>
+        <div id="claims-container" class="empty-state">Waiting for Box sync...</div>
+    </div>
+
+    <div class="card" style="opacity: 0.6;">
+        <h2>Revenue Insights</h2>
+        <p class="empty-state">Revenue tracking will activate upon next Box upload.</p>
+    </div>
 </div>
 
 <script>
     async function updateDashboard() {
-        // Cache busting to ensure we see the newest data
-        const response = await fetch('data.json?v=' + new Date().getTime());
-        const data = await response.json();
-        
-        document.getElementById('time').innerText = data.last_update;
-        
-        const container = document.getElementById('claims-container');
-        if (data.claims.length === 0) {
-            container.innerHTML = "No claims data found.";
-            return;
-        }
+        try {
+            // Added ?v= timestamp to force the browser to ignore cached data
+            const response = await fetch('data.json?v=' + new Date().getTime());
+            
+            if (!response.ok) throw new Error("Data file not found");
+            
+            const data = await response.json();
+            
+            // UI Safety: Fallback to empty arrays if keys don't exist yet
+            const claims = data.claims || [];
+            const lastUpdate = data.last_update || "No recent activity";
+            
+            document.getElementById('time').innerText = lastUpdate;
+            const container = document.getElementById('claims-container');
 
-        container.innerHTML = data.claims.map(claim => `
-            <div class="claim-row">
-                <span><strong>ID:</strong> ${claim.Patient_ID || 'N/A'}</span>
-                <span class="status-paid">$${claim.Amount || '0.00'}</span>
-            </div>
-        `).join('');
+            if (claims.length === 0) {
+                container.innerHTML = "No claims data found. Ensure your Box file has 'claims' in the name.";
+                return;
+            }
+
+            // Map the data into rows
+            // NOTE: Ensure Patient_ID and Amount match your CSV column headers exactly
+            container.innerHTML = claims.map(item => `
+                <div class="claim-row">
+                    <span><strong>Patient ID:</strong> ${item.Patient_ID || item.ID || 'N/A'}</span>
+                    <span class="status-paid">$${parseFloat(item.Amount || item.Total || 0).toLocaleString()}</span>
+                </div>
+            `).join('');
+
+        } catch (err) {
+            console.error("Dashboard Error:", err);
+            document.getElementById('claims-container').innerHTML = "Bridge offline. Check GitHub Action status.";
+        }
     }
 
+    // Run immediately on load
     updateDashboard();
-    // Refresh every 60 seconds automatically
+
+    // Auto-refresh every 60 seconds so Bryan doesn't have to hit F5
     setInterval(updateDashboard, 60000);
 </script>
 
