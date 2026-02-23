@@ -1,46 +1,33 @@
 import pandas as pd
 import json
 import os
-import sys
-
-# Ensure local libraries are prioritized
-sys.path.append(os.getcwd())
-
-from box_sdk_gen import BoxClient, BoxCCGAuth, CCGConfig
+from boxsdk import CCGAuth, Client
 
 def get_box_client():
     client_id = os.environ.get('BOX_CLIENT_ID')
     client_secret = os.environ.get('BOX_CLIENT_SECRET')
     enterprise_id = '1444288525'
 
-    print("Authenticating with Box (Compatibility Mode)...")
-    
-    # Initialize config with ONLY core credentials
-    config = CCGConfig(
+    print("Authenticating with Stable Legacy SDK...")
+    # This specific handshake is the industry standard for Box CCG
+    auth = CCGAuth(
         client_id=client_id,
-        client_secret=client_secret
+        client_secret=client_secret,
+        enterprise_id=enterprise_id
     )
-    
-    # Create the Auth object
-    auth = BoxCCGAuth(config)
-    
-    # Manually assign the subject details required for CCG
-    auth.box_subject_type = "enterprise"
-    auth.box_subject_id = enterprise_id
-    
-    return BoxClient(auth)
+    return Client(auth)
 
 def get_latest_file_id(client, folder_id, name_prefix):
     """Finds the newest file in a folder starting with a prefix."""
     print(f"Scanning Folder {folder_id} for newest '{name_prefix}' file...")
     
-    # Modern SDK method to list items
-    items = client.folders.get_folder_items(folder_id).entries
+    # Get all items in the folder using stable legacy logic
+    folder_items = client.folder(folder_id=folder_id).get_items()
 
     latest_file = None
-    for item in items:
+    for item in folder_items:
         if item.type == 'file' and item.name.lower().startswith(name_prefix.lower()):
-            if latest_file is None or item.modified_at > latest_file.modified_at:
+            if latest_file is None or item.content_modified_at > latest_file.content_modified_at:
                 latest_file = item
 
     if latest_file:
@@ -52,7 +39,7 @@ def congregate_data():
     print("--- Starting Smart Folder Sync ---")
     client = get_box_client()
     
-    # Reports folder ID: 367459660638
+    # Your Reports Folder ID
     FOLDER_REPORTS_ID = '367459660638' 
 
     targets = {
@@ -68,14 +55,12 @@ def congregate_data():
             local_filename = f"{prefix}.csv"
             print(f"Downloading {real_name}...")
             
-            # Modern SDK download method
-            file_content = client.files.download_file(file_id)
             with open(local_filename, 'wb') as f:
-                f.write(file_content)
+                client.file(file_id).download_to(f)
             
             downloaded_files.append(local_filename)
         else:
-            print(f"CRITICAL: No file found starting with '{prefix}'")
+            print(f"CRITICAL: No file found starting with '{prefix}' in folder {folder_id}")
 
     if len(downloaded_files) < 2:
         print("Sync Aborted: Required files missing from Box.")
@@ -85,7 +70,7 @@ def congregate_data():
         df_a = pd.read_csv('Group_A_Claims.csv')
         df_b = pd.read_csv('Group_B_Revenue.csv')
 
-        # Map Tebra column names to unified labels
+        # PractiSynergy Column Mapping
         df_a = df_a.rename(columns={'Provider_Name': 'Provider', 'Amount_Billed': 'Amount'})
         df_b = df_b.rename(columns={'Doctor': 'Provider', 'Gross_Charge': 'Amount'})
 
@@ -100,7 +85,7 @@ def congregate_data():
         with open('data.json', 'w') as f:
             json.dump(summary, f, indent=4)
         
-        print(f"SUCCESS: Dashboard updated at {summary['last_updated']}")
+        print(f"SUCCESS: Dashboard updated via Legacy SDK.")
 
     except Exception as e:
         print(f"Error during data processing: {e}")
