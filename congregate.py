@@ -4,7 +4,7 @@ import pandas as pd
 import requests
 
 def get_access_token():
-    """Manually handles the CCG Handshake without an SDK."""
+    """Manually handles the CCG Handshake."""
     url = "https://api.box.com/oauth2/token"
     data = {
         'grant_type': 'client_credentials',
@@ -13,45 +13,72 @@ def get_access_token():
         'box_subject_type': 'enterprise',
         'box_subject_id': '1444288525'
     }
-    
     response = requests.post(url, data=data)
     if response.status_code != 200:
         raise Exception(f"Auth Failed: {response.status_code} - {response.text}")
-    
     return response.json()['access_token']
 
-def download_box_file(file_id, access_token, local_name):
-    """Downloads a file directly via REST API."""
-    url = f"https://api.box.com/2.0/files/{file_id}/content"
-    headers = {'Authorization': f'Bearer {access_token}'}
+def get_latest_file_id(folder_id, prefix, token):
+    """Scans the folder for the newest file matching the prefix."""
+    url = f"https://api.box.com/2.0/folders/{folder_id}/items"
+    headers = {'Authorization': f'Bearer {token}'}
+    params = {'fields': 'name,content_modified_at'}
     
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, params=params)
     if response.status_code != 200:
-        raise Exception(f"Download Failed for {file_id}: {response.status_code}")
+        raise Exception(f"Folder Scan Failed: {response.status_code}")
+    
+    items = response.json().get('entries', [])
+    # Filter for files matching the prefix
+    matching_files = [
+        i for i in items 
+        if i['type'] == 'file' and i['name'].lower().startswith(prefix.lower())
+    ]
+    
+    if not matching_files:
+        return None, None
+        
+    # Sort by modification date (newest first)
+    latest = sorted(matching_files, key=lambda x: x['content_modified_at'], reverse=True)[0]
+    return latest['id'], latest['name']
+
+def download_box_file(file_id, token, local_name):
+    """Downloads file content via REST API."""
+    url = f"https://api.box.com/2.0/files/{file_id}/content"
+    headers = {'Authorization': f'Bearer {token}'}
+    response = requests.get(url, headers=headers)
+    
+    if response.status_code != 200:
+        raise Exception(f"Download Failed: {response.status_code}")
     
     with open(local_name, 'wb') as f:
         f.write(response.content)
-    print(f"Successfully downloaded {local_name}")
 
 def congregate_data():
-    print("--- Starting REST API Data Sync ---")
+    print("--- Starting Smart REST Sync ---")
     try:
-        # 1. Get Token
         token = get_access_token()
+        FOLDER_ID = '367459660638'
         
-        # 2. Static IDs provided by Bryan
-        CLAIMS_ID = '2143561343275'
-        REVENUE_ID = '2143561223806'
+        # 1. Smart Scan for newest files
+        claims_id, claims_name = get_latest_file_id(FOLDER_ID, 'Group_A_Claims', token)
+        rev_id, rev_name = get_latest_file_id(FOLDER_ID, 'Group_B_Revenue', token)
         
-        # 3. Download
-        download_box_file(CLAIMS_ID, token, 'claims.csv')
-        download_box_file(REVENUE_ID, token, 'revenue.csv')
-        
-        # 4. Process with Pandas
+        if not (claims_id and rev_id):
+            print("ERROR: Could not find files. Ensure 'Tebra_Data_Bridge' is invited to the folder.")
+            return
+
+        print(f"Latest Claims: {claims_name}")
+        print(f"Latest Revenue: {rev_name}")
+
+        # 2. Download
+        download_box_file(claims_id, token, 'claims.csv')
+        download_box_file(rev_id, token, 'revenue.csv')
+
+        # 3. Process
         df_a = pd.read_csv('claims.csv')
         df_b = pd.read_csv('revenue.csv')
         
-        # Map to unified names
         df_a = df_a.rename(columns={'Provider_Name': 'Provider', 'Amount_Billed': 'Amount'})
         df_b = df_b.rename(columns={'Doctor': 'Provider', 'Gross_Charge': 'Amount'})
         
@@ -66,8 +93,8 @@ def congregate_data():
         with open('data.json', 'w') as f:
             json.dump(summary, f, indent=4)
             
-        print(f"SUCCESS: Data congregated. Total: ${summary['total_revenue']:,.2f}")
-        
+        print(f"SUCCESS: Dashboard Updated. New Total: ${summary['total_revenue']:,.2f}")
+
     except Exception as e:
         print(f"CRITICAL ERROR: {str(e)}")
 
