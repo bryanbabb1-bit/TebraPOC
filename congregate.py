@@ -1,36 +1,43 @@
 import os
 import json
 import pandas as pd
-from boxsdk import CCGAuth, Client
+from box_sdk_gen import BoxClient, BoxCCGAuth, CCGConfig
 
 def congregate_data():
-    print("--- Starting Fresh Data Sync ---")
+    print("--- Starting Modern Data Sync ---")
     
     # 1. Credentials
     client_id = os.environ.get('BOX_CLIENT_ID')
     client_secret = os.environ.get('BOX_CLIENT_SECRET')
     enterprise_id = '1444288525'
 
-    # 2. Authentication
-    print("Connecting to Box...")
-    auth = CCGAuth(
+    # 2. Authentication with the Modern SDK
+    print("Connecting to Box via Modern SDK...")
+    config = CCGConfig(
         client_id=client_id,
         client_secret=client_secret,
-        enterprise_id=enterprise_id
+        box_subject_type="enterprise",
+        box_subject_id=enterprise_id
     )
-    client = Client(auth)
+    auth = BoxCCGAuth(config)
+    client = BoxClient(auth)
 
     # 3. Static IDs Provided by Bryan
     CLAIMS_FILE_ID = '2143561343275' 
     REVENUE_FILE_ID = '2143561223806'
 
-    # 4. Download and Merge
+    # 4. Download
     print(f"Downloading Claims and Revenue files...")
+    # Use the Modern SDK download method
+    claims_content = client.files.download_file(CLAIMS_FILE_ID)
     with open('claims.csv', 'wb') as f:
-        client.file(CLAIMS_FILE_ID).download_to(f)
-    with open('revenue.csv', 'wb') as f:
-        client.file(REVENUE_FILE_ID).download_to(f)
+        f.write(claims_content)
 
+    revenue_content = client.files.download_file(REVENUE_FILE_ID)
+    with open('revenue.csv', 'wb') as f:
+        f.write(revenue_content)
+
+    # 5. Process
     df_claims = pd.read_csv('claims.csv')
     df_revenue = pd.read_csv('revenue.csv')
 
@@ -50,8 +57,7 @@ def congregate_data():
     with open('data.json', 'w') as f:
         json.dump(summary, f, indent=4)
     
-    print(f"SUCCESS: Sync complete for {summary['last_updated']}")
+    print(f"SUCCESS: Sync complete at {summary['last_updated']}")
 
 if __name__ == "__main__":
     congregate_data()
-
