@@ -17,20 +17,19 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          # We are force-installing to the current directory to ensure the script sees it
-          pip install pandas boxsdk[jwt] --target .
+          # Standard install - no 'target' hacks
+          pip install pandas "boxsdk[jwt]"
 
-      - name: Debug Environment
+      - name: Verify Installation
         run: |
-          echo "Listing files in current directory:"
-          ls -R | grep boxsdk || echo "boxsdk folder not found in current directory"
+          echo "--- INSTALLED PACKAGES ---"
+          pip list
+          echo "--- END PACKAGE LIST ---"
 
       - name: Run Congregator Script
         env:
           BOX_CLIENT_ID: ${{ secrets.BOX_CLIENT_ID }}
           BOX_CLIENT_SECRET: ${{ secrets.BOX_CLIENT_SECRET }}
-          # Explicitly tell Python to look in the current folder first
-          PYTHONPATH: .
         run: python congregate.py
 
       - name: Commit and Push
