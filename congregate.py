@@ -8,8 +8,8 @@ def get_box_client():
     client_secret = os.environ.get('BOX_CLIENT_SECRET')
     enterprise_id = '1444288525'
 
-    print("Authenticating with Box Legacy SDK...")
-    # This is the proven handshake for Client Credentials Grant
+    print(f"Authenticating for Enterprise: {enterprise_id}")
+    # The Legacy SDK handles the CCG handshake perfectly with just these 3 lines
     auth = CCGAuth(
         client_id=client_id,
         client_secret=client_secret,
@@ -18,57 +18,57 @@ def get_box_client():
     return Client(auth)
 
 def get_latest_file_id(client, folder_id, name_prefix):
-    """Finds the newest file in a folder starting with a prefix."""
-    print(f"Scanning Folder {folder_id} for newest '{name_prefix}' file...")
+    """Finds the newest file in the folder starting with the prefix."""
+    print(f"Scanning Folder {folder_id} for '{name_prefix}'...")
     
-    # Get all items in the folder
-    folder_items = client.folder(folder_id=folder_id).get_items()
+    # get_items() is the stable way to list folder contents
+    items = client.folder(folder_id).get_items()
 
     latest_file = None
-    for item in folder_items:
+    for item in items:
+        # Check if it's a file and matches the prefix (e.g., 'Group_A_Claims')
         if item.type == 'file' and item.name.lower().startswith(name_prefix.lower()):
-            # Using content_modified_at for the most accurate 'latest' check
+            # Use content_modified_at to find the most recent drop
             if latest_file is None or item.content_modified_at > latest_file.content_modified_at:
                 latest_file = item
 
     if latest_file:
-        print(f"Found Latest: {latest_file.name} (ID: {latest_file.id})")
+        print(f"  > Found Latest: {latest_file.name} (Modified: {latest_file.content_modified_at})")
         return latest_file.id, latest_file.name
     return None, None
 
 def congregate_data():
-    print("--- Starting Smart Folder Sync ---")
-    client = get_box_client()
-    
-    FOLDER_REPORTS_ID = '367459660638' 
-
-    targets = {
-        'Group_A_Claims': FOLDER_REPORTS_ID,
-        'Group_B_Revenue': FOLDER_REPORTS_ID
-    }
-
-    downloaded_files = []
-    for prefix, folder_id in targets.items():
-        file_id, real_name = get_latest_file_id(client, folder_id, prefix)
-        
-        if file_id:
-            local_filename = f"{prefix}.csv"
-            print(f"Downloading {real_name}...")
-            with open(local_filename, 'wb') as f:
-                client.file(file_id).download_to(f)
-            downloaded_files.append(local_filename)
-        else:
-            print(f"CRITICAL: No file found starting with '{prefix}'")
-
-    if len(downloaded_files) < 2:
-        print("Sync Aborted: Missing files.")
-        return
-
+    print("--- Starting PractiSynergy Data Sync ---")
     try:
-        df_a = pd.read_csv('Group_A_Claims.csv')
-        df_b = pd.read_csv('Group_B_Revenue.csv')
+        client = get_box_client()
+        FOLDER_ID = '367459660638' 
 
-        # Clean/Rename Columns
+        # Define what we are looking for
+        targets = {
+            'Group_A_Claims': FOLDER_ID,
+            'Group_B_Revenue': FOLDER_ID
+        }
+
+        downloaded = {}
+        for prefix, f_id in targets.items():
+            file_id, real_name = get_latest_file_id(client, f_id, prefix)
+            if file_id:
+                local_path = f"{prefix}.csv"
+                with open(local_path, 'wb') as f:
+                    client.file(file_id).download_to(f)
+                downloaded[prefix] = local_path
+            else:
+                print(f"  ! Warning: No file found for {prefix}")
+
+        if len(downloaded) < 2:
+            print("Abort: Could not find both Claims and Revenue files.")
+            return
+
+        # Data Processing
+        df_a = pd.read_csv(downloaded['Group_A_Claims'])
+        df_b = pd.read_csv(downloaded['Group_B_Revenue'])
+
+        # PractiSynergy Column Alignment
         df_a = df_a.rename(columns={'Provider_Name': 'Provider', 'Amount_Billed': 'Amount'})
         df_b = df_b.rename(columns={'Doctor': 'Provider', 'Gross_Charge': 'Amount'})
 
@@ -83,10 +83,10 @@ def congregate_data():
         with open('data.json', 'w') as f:
             json.dump(summary, f, indent=4)
         
-        print(f"SUCCESS: Dashboard data updated.")
+        print(f"SUCCESS: Dashboard data updated for PractiSynergy POC.")
 
     except Exception as e:
-        print(f"Error processing data: {e}")
+        print(f"Error: {str(e)}")
 
 if __name__ == "__main__":
     congregate_data()
