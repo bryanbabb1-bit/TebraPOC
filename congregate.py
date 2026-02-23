@@ -18,13 +18,12 @@ def congregate_data():
     )
     client = Client(auth)
 
-    # 2. Hard-coded File IDs (The IDs we know worked)
-    # Update these if you have specific newer versions you want to pin
-    CLAIMS_FILE_ID = '1770258164319' 
-    REVENUE_FILE_ID = '1770265215758'
+    # 2. Updated Static File IDs from Bryan
+    CLAIMS_FILE_ID = '2143561343275' 
+    REVENUE_FILE_ID = '2143561223806'
 
     # 3. Download
-    print("Downloading files...")
+    print(f"Downloading Claims ({CLAIMS_FILE_ID}) and Revenue ({REVENUE_FILE_ID})...")
     with open('claims.csv', 'wb') as f:
         client.file(CLAIMS_FILE_ID).download_to(f)
     with open('revenue.csv', 'wb') as f:
@@ -34,6 +33,7 @@ def congregate_data():
     df_a = pd.read_csv('claims.csv')
     df_b = pd.read_csv('revenue.csv')
 
+    # Normalize columns
     df_a = df_a.rename(columns={'Provider_Name': 'Provider', 'Amount_Billed': 'Amount'})
     df_b = df_b.rename(columns={'Doctor': 'Provider', 'Gross_Charge': 'Amount'})
 
